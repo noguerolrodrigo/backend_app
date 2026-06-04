@@ -41,13 +41,14 @@ class ProductoService:
         return self.uow.session.exec(statement).first()
 
     def create(self, producto: Producto):
-        """Crea un nuevo producto (commit manejado por UoW)"""
+        """Crea un nuevo producto y lo retorna con relaciones eager-loaded"""
         self.uow.session.add(producto)
         self.uow.session.flush()
-        return producto
+        # Recargar con relaciones eager-loaded para evitar DetachedInstanceError
+        return self.get_by_id(producto.id)
 
     def update(self, db_producto: Producto, data: dict):
-        """Actualiza un producto (commit manejado por UoW)"""
+        """Actualiza un producto y lo retorna con relaciones eager-loaded"""
         excluded_fields = {"id", "created_at", "deleted_at"}
         for key, value in data.items():
             if key not in excluded_fields and value is not None:
@@ -56,7 +57,8 @@ class ProductoService:
         db_producto.updated_at = datetime.utcnow()
         self.uow.session.add(db_producto)
         self.uow.session.flush()
-        return db_producto
+        # Recargar con relaciones eager-loaded para evitar DetachedInstanceError
+        return self.get_by_id(db_producto.id)
 
     def soft_delete(self, db_producto: Producto):
         """Elimina un producto de forma lógica (commit manejado por UoW)"""
@@ -72,20 +74,20 @@ class ProductoService:
         self.uow.session.flush()
 
     def restore(self, db_producto: Producto):
-        """Restaura un producto eliminado (commit manejado por UoW)"""
+        """Restaura un producto eliminado y lo retorna con relaciones eager-loaded"""
         db_producto.deleted_at = None
         db_producto.updated_at = datetime.utcnow()
         self.uow.session.add(db_producto)
         self.uow.session.flush()
-        return db_producto
+        return self.get_by_id(db_producto.id)
 
     def update_disponibilidad(self, db_producto: Producto, disponible: bool):
-        """Actualiza la disponibilidad de un producto (commit manejado por UoW)"""
+        """Actualiza la disponibilidad y retorna el producto con relaciones eager-loaded"""
         db_producto.disponible = disponible
         db_producto.updated_at = datetime.utcnow()
         self.uow.session.add(db_producto)
         self.uow.session.flush()
-        return db_producto
+        return self.get_by_id(db_producto.id)
 
     def get_filtered(
         self,

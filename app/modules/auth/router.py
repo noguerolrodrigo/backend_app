@@ -13,6 +13,21 @@ router = APIRouter(prefix="/api/v1/auth", tags=["Auth"])
 @router.post("/login", response_model=LoginResponse)
 def login(data: LoginRequest):
     """Authenticate user and return JWT token with roles"""
+    from app.modules.usuario.repository import UsuarioRepository
+
+    print(f"\n🔐 LOGIN ATTEMPT — email='{data.email}', password_len={len(data.password)}")
+    # Chequear si el usuario existe en la DB
+    from app.core.database import engine
+    from sqlmodel import Session
+    with Session(engine) as debug_session:
+        repo = UsuarioRepository(debug_session)
+        found = repo.get_by_email(data.email)
+        if found:
+            print(f"  ✓ Usuario encontrado: id={found.id}, activo={found.activo}, hash={found.password_hash[:20]}...")
+        else:
+            print(f"  ✗ Usuario NO encontrado en la DB para email='{data.email}'")
+            print(f"  → Posible causa: el seed no se commiteó. Verificá main.py lifespan + session.commit()")
+
     with UsuarioUnitOfWork() as uow:
         service = UsuarioService(uow)
         user = service.verificar_contrasena(data.email, data.password)

@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
+from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 
 from app.core.base_repository import BaseRepository
@@ -14,13 +15,15 @@ class UsuarioRepository(BaseRepository[Usuario]):
         super().__init__(Usuario, session)
 
     def get_by_id(self, usuario_id: int, include_deleted: bool = False) -> Optional[Usuario]:
-        """Obtiene un usuario por ID"""
-        if include_deleted:
-            return super().get_by_id(usuario_id)
-        usuario = super().get_by_id(usuario_id)
-        if usuario and usuario.is_deleted():
-            return None
-        return usuario
+        """Obtiene un usuario por ID con roles eager-loaded"""
+        query = (
+            select(Usuario)
+            .where(Usuario.id == usuario_id)
+            .options(selectinload(Usuario.roles))
+        )
+        if not include_deleted:
+            query = query.where(Usuario.deleted_at.is_(None))
+        return self.session.exec(query).first()
 
     def get_by_email(self, email: str, include_deleted: bool = False) -> Optional[Usuario]:
         """Obtiene un usuario por email"""
@@ -30,8 +33,8 @@ class UsuarioRepository(BaseRepository[Usuario]):
         return self.session.exec(query).first()
 
     def get_all(self, skip: int = 0, limit: int = 100, include_deleted: bool = False) -> list[Usuario]:
-        """Obtiene todos los usuarios"""
-        query = select(Usuario)
+        """Obtiene todos los usuarios con roles eager-loaded"""
+        query = select(Usuario).options(selectinload(Usuario.roles))
         if not include_deleted:
             query = query.where(Usuario.deleted_at.is_(None))
         return self.session.exec(query.offset(skip).limit(limit)).all()

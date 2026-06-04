@@ -1,6 +1,9 @@
 from datetime import datetime
 from typing import Optional
 
+from sqlalchemy.orm import selectinload
+from sqlmodel import select
+
 from app.core.security import hash_password, verify_password
 from app.modules.usuario.models import Usuario, Rol, UsuarioRol
 from app.modules.usuario.schemas import UsuarioCreate, UsuarioUpdate, RolCreate, RolUpdate
@@ -30,7 +33,14 @@ class UsuarioService:
             activo=data.activo
         )
 
-        return self.uow.usuarios.create(usuario)
+        self.uow.usuarios.create(usuario)
+        # Recargar con roles eager-loaded para evitar DetachedInstanceError al serializar
+        statement = (
+            select(Usuario)
+            .where(Usuario.id == usuario.id)
+            .options(selectinload(Usuario.roles))
+        )
+        return self.uow.session.exec(statement).first()
 
     def obtener_usuario_por_id(self, usuario_id: int) -> Optional[Usuario]:
         """Obtiene un usuario por ID"""

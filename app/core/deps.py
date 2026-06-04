@@ -24,6 +24,8 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import selectinload
+from sqlmodel import select
 
 from app.core.security import decode_access_token
 from app.modules.usuario.models import Usuario
@@ -95,7 +97,13 @@ async def get_current_user(
         raise credentials_exception
 
     with UsuarioUnitOfWork() as uow:
-        user = uow.usuarios.get_by_id(int(user_id))
+        query = (
+            select(Usuario)
+            .where(Usuario.id == int(user_id), Usuario.deleted_at.is_(None))
+            .options(selectinload(Usuario.roles))
+        )
+        user = uow.session.exec(query).first()
+
         if user is None or not user.is_active():
             raise credentials_exception
 

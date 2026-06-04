@@ -8,9 +8,8 @@ Popula la base de datos con:
 - Usuario Admin por defecto
 """
 
-import hashlib
-import secrets
 from sqlmodel import Session, select
+from app.core.security import hash_password
 from app.modules.usuario.models import Usuario, Rol, UsuarioRol
 from app.modules.pedido.models import EstadoPedido, FormaPago
 
@@ -62,15 +61,8 @@ def seed_admin_user(session: Session) -> None:
         print("✗ Rol ADMIN no encontrado. Ejecuta seed_roles() primero.")
         return
     
-    # Generar hash para contraseña por defecto: "admin123"
-    salt = secrets.token_hex(16)
-    pwd_hash = hashlib.pbkdf2_hmac(
-        'sha256',
-        "admin123".encode('utf-8'),
-        bytes.fromhex(salt),
-        100000
-    )
-    password_hash = f"{salt}${pwd_hash.hex()}"
+    # Generar hash bcrypt para contraseña por defecto: "admin123"
+    password_hash = hash_password("admin123")
 
     # Crear usuario admin
     usuario_admin = Usuario(

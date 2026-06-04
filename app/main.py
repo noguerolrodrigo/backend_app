@@ -32,9 +32,10 @@ async def lifespan(app: FastAPI):
     # Crear todas las tablas
     SQLModel.metadata.create_all(engine)
     
-    # Poblar seed data
+    # Poblar seed data y COMMITEAR — sin commit los datos se pierden al cerrar sesión
     with Session(engine) as session:
         seed_database(session)
+        session.commit()
     
     yield
 
